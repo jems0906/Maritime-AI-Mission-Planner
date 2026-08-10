@@ -136,6 +136,18 @@ Create three Railway services:
    - Variable:
      - `VITE_API_BASE_URL=https://<backend-service-domain>/api`
 
+## One-file Railway deployment
+
+Use a single script to deploy backend and frontend services and run strict readiness checks:
+
+1. `powershell -ExecutionPolicy Bypass -File scripts/deploy-railway.ps1 -ProjectId "<railway-project-id>" -Environment "production" -BackendService "backend" -FrontendService "frontend" -DatabaseUrl "postgresql+psycopg://<user>:<pass>@<host>:5432/<db>" -BackendUrl "https://<backend-domain>" -FrontendUrl "https://<frontend-domain>" -CorsOrigins "https://<frontend-domain>" -OperatorApiKey "<operator-key>" -ReviewerApiKey "<reviewer-key>" -AdminApiKey "<admin-key>"`
+
+Notes:
+
+- The script sets backend/frontend environment variables, deploys both services from this monorepo, and runs `scripts/release-readiness.ps1` in strict mode.
+- Use `-DryRun` first to preview Railway commands without deploying.
+- Use `-SkipReadiness` only when backend/frontend public URLs are not available yet.
+
 ## API highlights
 
 - `POST /api/scenarios/generate`

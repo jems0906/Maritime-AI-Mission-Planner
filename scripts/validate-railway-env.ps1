@@ -35,8 +35,13 @@ function Assert-HttpsUrl {
 Assert-HttpsUrl -Name "BackendUrl" -Value $BackendUrl
 Assert-HttpsUrl -Name "FrontendUrl" -Value $FrontendUrl
 
-if (-not $DatabaseUrl.StartsWith("postgresql+psycopg://")) {
-    throw "DatabaseUrl must start with postgresql+psycopg://"
+$dbUrlAccepted =
+    $DatabaseUrl.StartsWith("postgresql+psycopg://") -or
+    $DatabaseUrl.StartsWith("postgresql://") -or
+    $DatabaseUrl.StartsWith('${{Postgres.')
+
+if (-not $dbUrlAccepted) {
+    throw "DatabaseUrl must start with postgresql+psycopg://, postgresql://, or use a Railway Postgres reference"
 }
 
 if ([string]::IsNullOrWhiteSpace($ModelPath)) {
@@ -54,10 +59,19 @@ if (-not ($allowed -contains $FrontendUrl)) {
 }
 
 Write-Host "RAILWAY_ENV_OK" -ForegroundColor Green
+$databaseScheme = "unknown"
+if ($DatabaseUrl.StartsWith("postgresql+psycopg://")) {
+    $databaseScheme = "postgresql+psycopg"
+} elseif ($DatabaseUrl.StartsWith("postgresql://")) {
+    $databaseScheme = "postgresql"
+} elseif ($DatabaseUrl.StartsWith('${{Postgres.')) {
+    $databaseScheme = "railway-reference"
+}
+
 Write-Output (@{
     backend_url = $BackendUrl
     frontend_url = $FrontendUrl
     cors_origins = $CorsOrigins
     model_path = $ModelPath
-    database_url_scheme = "postgresql+psycopg"
+    database_url_scheme = $databaseScheme
 } | ConvertTo-Json -Depth 3)

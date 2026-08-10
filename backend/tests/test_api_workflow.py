@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -8,6 +9,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Keep tests isolated from local demo DB.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 os.environ["DATABASE_URL"] = "sqlite:///./test_mission_planner.db"
 os.environ["MODEL_PATH"] = "ml_artifacts/test_ranker.joblib"
 os.environ["OPERATOR_API_KEY"] = "operator-test-key"

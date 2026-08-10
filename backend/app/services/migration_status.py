@@ -35,8 +35,10 @@ def _read_current_revision(connection: Connection) -> str | None:
 def get_migration_status(engine: Engine) -> dict[str, str | bool | None]:
     backend_root = Path(__file__).resolve().parents[2]
     alembic_ini = backend_root / "alembic.ini"
+    alembic_script_dir = backend_root / "alembic"
 
     alembic_cfg = Config(str(alembic_ini))
+    alembic_cfg.set_main_option("script_location", str(alembic_script_dir))
     script = ScriptDirectory.from_config(alembic_cfg)
     head_revision = script.get_current_head()
 

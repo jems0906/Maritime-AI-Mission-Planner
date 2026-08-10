@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maritime Search Decision Support</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <h1>Maritime Search Decision Support</h1>
+        <p>
+          Recommendation-only workflow for synthetic maritime missions. AI priorities are advisory and every final tasking
+          decision must be approved by a human operator.
+        </p>
+      </header>
+
+      <section class="warning-banner">
+        This system does not autonomously assign missions. Human review, acceptance/rejection, and justification are
+        mandatory for every recommendation.
+      </section>
+
+      <section class="runtime-banner" aria-label="runtime-mode">
+        <strong id="runtime-mode-label">Runtime: Fallback Static Mode</strong>
+        <span id="runtime-mode-help">Use npm run dev:vite for Vite React mode when native bundler binaries are available.</span>
+      </section>
+
+      <section class="card controls">
+        <h3>Scenario Data</h3>
+        <div class="control-grid">
+          <label>Mission name <input id="mission-name" value="Synthetic Mission Alpha" /></label>
+          <label>Rows <input id="rows" type="number" min="2" max="50" value="8" /></label>
+          <label>Columns <input id="cols" type="number" min="2" max="50" value="8" /></label>
+          <label>Seed <input id="seed" type="number" value="7" /></label>
+
+          <div class="button-row">
+            <button id="btn-generate">Generate Synthetic Scenario</button>
+            <label class="file-upload">Upload Scenario JSON <input id="upload-json" type="file" accept=".json" /></label>
+            <label class="file-upload alt">Upload Scenario CSV <input id="upload-csv" type="file" accept=".csv" /></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card controls">
+        <h3>Mission Execution</h3>
+        <div class="button-row">
+          <select id="scenario-select" aria-label="Select scenario"></select>
+          <button id="btn-train">Train / Refresh ML Model</button>
+          <button id="btn-rank">Rank Search Areas</button>
+          <input id="reviewer-name" value="Ops Officer" placeholder="Reviewer name" />
+        </div>
+        <div class="muted" id="model-used">Current ranking method: -</div>
+      </section>
+
+      <section id="toast-success" class="toast success hidden"></section>
+      <section id="toast-error" class="toast error hidden"></section>
+
+      <section class="layout-grid">
+        <div class="card">
+          <h3>Interactive Grid Risk View</h3>
+          <div id="map"></div>
+        </div>
+
+        <div class="card">
+          <h3>After-Action Metrics</h3>
+          <div id="report"></div>
+          <button id="btn-export-report">Export Markdown Report</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Database Migration Status</h3>
+        <div id="migration-status">Loading migration status...</div>
+        <button id="btn-refresh-migration">Refresh</button>
+      </section>
+
+      <section class="card">
+        <h3>Recommendation Queue</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Sector</th>
+                <th>Risk</th>
+                <th>Confidence</th>
+                <th>Coverage</th>
+                <th>Top factors</th>
+                <th>Review</th>
+              </tr>
+            </thead>
+            <tbody id="recommendations-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>Audit Log</h3>
+        <div id="audit-log"></div>
+      </section>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,120 @@
+name: Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: "Backend Railway URL (no /api suffix)"
+        required: true
+        type: string
+      frontend_url:
+        description: "Frontend Railway URL"
+        required: true
+        type: string
+      cors_origins:
+        description: "CORS_ORIGINS value (comma-separated)"
+        required: true
+        type: string
+      model_path:
+        description: "MODEL_PATH value"
+        required: false
+        default: "ml_artifacts/ranker.joblib"
+        type: string
+      require_external:
+        description: "Fail if external validation or strict key smoke checks cannot run"
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  release-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Install backend dependencies
+        shell: pwsh
+        run: |
+          Set-Location backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        shell: pwsh
+        run: |
+          Set-Location frontend
+          npm ci
+
+      - name: Run release readiness gate
+        shell: pwsh
+        env:
+          RAILWAY_DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+          RAILWAY_OPERATOR_KEY: ${{ secrets.RAILWAY_OPERATOR_KEY }}
+          RAILWAY_REVIEWER_KEY: ${{ secrets.RAILWAY_REVIEWER_KEY }}
+          RAILWAY_ADMIN_KEY: ${{ secrets.RAILWAY_ADMIN_KEY }}
+        run: |
+          $evidenceDir = Join-Path $PWD ".artifacts/release-readiness"
+          New-Item -ItemType Directory -Force -Path $evidenceDir | Out-Null
+          $logPath = Join-Path $evidenceDir "release-readiness.log"
+
+          if ([string]::IsNullOrWhiteSpace($env:RAILWAY_DATABASE_URL)) {
+            throw "Missing required secret: RAILWAY_DATABASE_URL"
+          }
+
+          $releaseArgs = @(
+            "-ExecutionPolicy", "Bypass",
+            "-File", "scripts/release-readiness.ps1",
+            "-BackendUrl", "${{ inputs.backend_url }}",
+            "-FrontendUrl", "${{ inputs.frontend_url }}",
+            "-DatabaseUrl", "$env:RAILWAY_DATABASE_URL",
+            "-CorsOrigins", "${{ inputs.cors_origins }}",
+            "-ModelPath", "${{ inputs.model_path }}"
+          )
+
+          if (-not [string]::IsNullOrWhiteSpace($env:RAILWAY_OPERATOR_KEY)) {
+            $releaseArgs += @("-OperatorKey", "$env:RAILWAY_OPERATOR_KEY")
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:RAILWAY_REVIEWER_KEY)) {
+            $releaseArgs += @("-ReviewerKey", "$env:RAILWAY_REVIEWER_KEY")
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:RAILWAY_ADMIN_KEY)) {
+            $releaseArgs += @("-AdminKey", "$env:RAILWAY_ADMIN_KEY")
+          }
+          if ("${{ inputs.require_external }}" -eq "true") {
+            $releaseArgs += "-RequireExternal"
+          }
+
+          powershell @releaseArgs *>&1 | Tee-Object -FilePath $logPath
+          if ($LASTEXITCODE -ne 0) {
+            throw "release-readiness script failed"
+          }
+
+          @(
+            "backend_url=${{ inputs.backend_url }}"
+            "frontend_url=${{ inputs.frontend_url }}"
+            "cors_origins=${{ inputs.cors_origins }}"
+            "model_path=${{ inputs.model_path }}"
+            "require_external=${{ inputs.require_external }}"
+            "timestamp=$(Get-Date -Format o)"
+          ) | Set-Content -Path (Join-Path $evidenceDir "run-metadata.txt")
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-readiness-evidence
+          path: .artifacts/release-readiness
+          if-no-files-found: error

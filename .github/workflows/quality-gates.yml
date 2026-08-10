@@ -1,0 +1,66 @@
+name: Quality Gates
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "scripts/**"
+      - ".github/workflows/quality-gates.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "scripts/**"
+      - ".github/workflows/quality-gates.yml"
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        shell: pwsh
+        run: |
+          Set-Location backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        shell: pwsh
+        run: |
+          Set-Location backend
+          alembic -c alembic.ini upgrade head
+          pytest -q
+
+  frontend-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Install frontend dependencies
+        shell: pwsh
+        run: |
+          Set-Location frontend
+          npm ci
+
+      - name: Run frontend typecheck
+        shell: pwsh
+        run: |
+          Set-Location frontend
+          npm run typecheck

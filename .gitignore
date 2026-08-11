@@ -17,3 +17,4 @@ dist/
 # Misc
 .DS_Store
 .vscode/
+scripts/.local-stack-pids.json

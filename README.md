@@ -170,7 +170,3 @@ Protected routes (`generate/upload/rank/review/train`) enforce API keys only whe
 - `pytest -q`
 
 CI is configured in `.github/workflows/backend-tests.yml` to run backend tests on push and pull request changes under `backend/`.
-
-## Interview-ready framing
-
-"I built this as a recommendation and prioritization aid, not an automation engine. The system surfaces explainable, confidence-scored search priorities, but a human operator must approve every final tasking decision."

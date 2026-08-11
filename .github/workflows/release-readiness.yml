@@ -125,8 +125,6 @@ jobs:
           }
 
           $releaseArgs = @(
-            "-ExecutionPolicy", "Bypass",
-            "-File", "scripts/release-readiness.ps1",
             "-BackendUrl", $backendUrl,
             "-FrontendUrl", $frontendUrl,
             "-DatabaseUrl", "$env:RAILWAY_DATABASE_URL",
@@ -147,7 +145,7 @@ jobs:
             $releaseArgs += "-RequireExternal"
           }
 
-          powershell @releaseArgs *>&1 | Tee-Object -FilePath $logPath
+          & "scripts/release-readiness.ps1" @releaseArgs *>&1 | Tee-Object -FilePath $logPath
           if ($LASTEXITCODE -ne 0) {
             throw "release-readiness script failed"
           }

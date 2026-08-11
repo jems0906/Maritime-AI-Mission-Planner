@@ -100,4 +100,4 @@ jobs:
       - name: Run repo foundation validation
         shell: pwsh
         run: |
-          powershell -ExecutionPolicy Bypass -File scripts/foundation-check.ps1
+          & "scripts/foundation-check.ps1"

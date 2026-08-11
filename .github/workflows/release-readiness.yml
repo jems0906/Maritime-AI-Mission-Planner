@@ -26,8 +26,16 @@ on:
         default: true
         type: boolean
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release-readiness:
+    timeout-minutes: 25
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -66,22 +74,64 @@ jobs:
           RAILWAY_REVIEWER_KEY: ${{ secrets.RAILWAY_REVIEWER_KEY }}
           RAILWAY_ADMIN_KEY: ${{ secrets.RAILWAY_ADMIN_KEY }}
         run: |
+          $ErrorActionPreference = "Stop"
+          $backendUrl = "${{ inputs.backend_url }}"
+          $frontendUrl = "${{ inputs.frontend_url }}"
+          $corsOrigins = "${{ inputs.cors_origins }}"
+          $modelPath = "${{ inputs.model_path }}"
+
           $evidenceDir = Join-Path $PWD ".artifacts/release-readiness"
           New-Item -ItemType Directory -Force -Path $evidenceDir | Out-Null
           $logPath = Join-Path $evidenceDir "release-readiness.log"
+
+          foreach ($entry in @(
+              @{ Name = "backend_url"; Value = $backendUrl },
+              @{ Name = "frontend_url"; Value = $frontendUrl },
+              @{ Name = "cors_origins"; Value = $corsOrigins }
+          )) {
+            if ([string]::IsNullOrWhiteSpace($entry.Value)) {
+              throw "Missing required input: $($entry.Name)"
+            }
+          }
+
+          foreach ($entry in @(
+              @{ Name = "BackendUrl"; Value = $backendUrl },
+              @{ Name = "FrontendUrl"; Value = $frontendUrl }
+          )) {
+            if (-not [Uri]::IsWellFormedUriString($entry.Value, [UriKind]::Absolute)) {
+              throw "$($entry.Name) is not a valid absolute URL: $($entry.Value)"
+            }
+
+            $uri = [Uri]$entry.Value
+            if ($uri.Scheme -ne "https") {
+              throw "$($entry.Name) must use https: $($entry.Value)"
+            }
+          }
+
+          $allowedOrigins = @($corsOrigins.Split(",", [System.StringSplitOptions]::RemoveEmptyEntries) | ForEach-Object { $_.Trim() })
+          if ($allowedOrigins.Count -eq 0) {
+            throw "CorsOrigins must contain at least one origin"
+          }
+          if (-not ($allowedOrigins -contains $frontendUrl)) {
+            throw "CorsOrigins must include FrontendUrl. FrontendUrl: $frontendUrl; CorsOrigins: $corsOrigins"
+          }
 
           if ([string]::IsNullOrWhiteSpace($env:RAILWAY_DATABASE_URL)) {
             throw "Missing required secret: RAILWAY_DATABASE_URL"
           }
 
+          if ([string]::IsNullOrWhiteSpace($modelPath)) {
+            throw "ModelPath must not be empty"
+          }
+
           $releaseArgs = @(
             "-ExecutionPolicy", "Bypass",
             "-File", "scripts/release-readiness.ps1",
-            "-BackendUrl", "${{ inputs.backend_url }}",
-            "-FrontendUrl", "${{ inputs.frontend_url }}",
+            "-BackendUrl", $backendUrl,
+            "-FrontendUrl", $frontendUrl,
             "-DatabaseUrl", "$env:RAILWAY_DATABASE_URL",
-            "-CorsOrigins", "${{ inputs.cors_origins }}",
-            "-ModelPath", "${{ inputs.model_path }}"
+            "-CorsOrigins", $corsOrigins,
+            "-ModelPath", $modelPath
           )
 
           if (-not [string]::IsNullOrWhiteSpace($env:RAILWAY_OPERATOR_KEY)) {

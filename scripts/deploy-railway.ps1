@@ -39,7 +39,10 @@ function Assert-Command {
 }
 
 function Invoke-Railway {
-    param([string[]]$CommandArgs)
+    param(
+        [Alias("Args")]
+        [string[]]$CommandArgs
+    )
 
     $safeArgs = @()
     foreach ($item in $CommandArgs) {
